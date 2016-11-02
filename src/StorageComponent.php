@@ -57,20 +57,15 @@ class StorageComponent extends Component {
 	 */
 	public function put($dstPath, $srcFile) {
 		$client = $this->getClient();
-
-		if (is_string($srcFile)) {
-			$file = fopen($srcFile, 'r');
-		} else if (is_resource($srcFile)) {
-			$file = $srcFile;
-		} else {
-			throw new \InvalidArgumentException('param $srcFile is invalid');
-		}
+		$handle = $this->getFileHandle($srcFile);
 
 		try {
-			$response = $client->put($dstPath, [ 'body' => $file ]);
+			$response = $client->put($dstPath, [ 'body' => $handle ]);
 		} catch (RequestException $e) {
 			throw new StorageException('put file error', 0, $e);
 		}
+
+		return $response->getStatusCode() == 201;
 	}
 
 	/**
@@ -119,7 +114,12 @@ class StorageComponent extends Component {
 			throw new StorageException('get headers failed', 0, $e);
 		}
 
-		return $response->getHeaders();
+		$headers = $response->getHeaders();
+		$result = [ ];
+		foreach ($headers as $name => $values) {
+			$result[$name] = implode(', ', $values);
+		}
+		return $result;
 	}
 
 	/**
@@ -129,10 +129,9 @@ class StorageComponent extends Component {
 	 * @throws StorageException
 	 */
 	public function exists($filename) {
-		$this->auth();
-
+		$client = $this->getClient();
 		try {
-			$response = $this->_sclient->head($filename);
+			$response = $client->head($filename);
 		} catch (RequestException $e) {
 			if ($e->getCode() == 404) {
 				return false;
@@ -148,19 +147,32 @@ class StorageComponent extends Component {
 	 * @throws StorageAuthException
 	 */
 	public function authenticate() {
-		$authClient = new HttpClient;
+		$authClient = $this->createAuthClient();
 		try {
-			$authClient->get($this->authUrl, [
+			$response = $authClient->get($this->authUrl, [
 				'timeout' => $this->authTimeout,
 				'headers' => [
 					'X-Auth-User' => $this->username,
-					'X-Auth-Key' => $this->authKey,
+					'X-Auth-Key' => $this->password,
 				],
 			]);
 		} catch (RequestException $e) {
-			throw new StorageAuthException('auth fail', 0, $e);
+			if ($e->getCode() == 403) {
+				throw new StorageAuthException('auth fail: invalid credentials', 0, $e);
+			} else if ($e->getCode() == 404) {
+				throw new StorageAuthException('auth fail: invalid auth url', 0, $e);
+			} else {
+				throw new StorageAuthException('auth fail: unknown reason', 0, $e);
+			}
 		}
 		$this->_client = $this->createClient($response->getHeader('x-storage-url'), $response->getHeader('x-storage-token'));
+	}
+
+	/**
+	 * @return \GuzzleHttp\Client
+	 */
+	protected function createAuthClient() {
+		return new HttpClient;
 	}
 
 	/**
@@ -170,7 +182,7 @@ class StorageComponent extends Component {
 	 * @param string $storageKey storage api token from x-storage-token
 	 * @return \GuzzleHttp\Client set-up guzzle client
 	 */
-	public function createClient($storageUrl, $storageKey) {
+	protected function createClient($storageUrl, $storageKey) {
 		return new HttpClient([
 			'base_url' => $storageUrl . $this->container . '/',
 			'defaults' => [
@@ -184,5 +196,15 @@ class StorageComponent extends Component {
 
 	public function getClient() {
 		return $this->_client;
+	}
+
+	public function getFileHandle($srcFile) {
+		if (is_string($srcFile)) {
+			$file = fopen($srcFile, 'r');
+		} else if (is_resource($srcFile)) {
+			$file = $srcFile;
+		} else {
+			throw new \InvalidArgumentException('param $srcFile is invalid');
+		}
 	}
 }
