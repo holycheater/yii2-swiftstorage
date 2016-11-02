@@ -6,3 +6,4 @@ install:
     - travis_retry composer global require "fxp/composer-asset-plugin:^1.1"
     - travis_retry composer install --prefer-dist --no-interaction
     - phpunit --version
+    - ./vendor/bin/phpunit --version
