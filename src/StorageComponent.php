@@ -43,7 +43,6 @@ class StorageComponent extends Component {
 
 	public function init() {
 		parent::init();
-		$this->authenticate();
 	}
 
 	/**
@@ -56,6 +55,7 @@ class StorageComponent extends Component {
 	 * @throws StorageException
 	 */
 	public function put($dstPath, $srcFile) {
+		$this->ensureAuth();
 		$client = $this->getClient();
 		$handle = $this->getFileHandle($srcFile);
 
@@ -76,6 +76,7 @@ class StorageComponent extends Component {
 	 * @throws StorageException
 	 */
 	public function get($filename) {
+		$this->ensureAuth();
 		$client = $this->getClient();
 
 		try {
@@ -106,6 +107,7 @@ class StorageComponent extends Component {
 	 * @throws StorageException
 	 */
 	public function headers($filename) {
+		$this->ensureAuth();
 		$client = $this->getClient();
 
 		try {
@@ -129,6 +131,7 @@ class StorageComponent extends Component {
 	 * @throws StorageException
 	 */
 	public function exists($filename) {
+		$this->ensureAuth();
 		$client = $this->getClient();
 		try {
 			$response = $client->head($filename);
@@ -173,6 +176,15 @@ class StorageComponent extends Component {
 	 */
 	protected function createAuthClient() {
 		return new HttpClient;
+	}
+
+	/**
+	 * login to auth server if needed
+	 */
+	public function ensureAuth() {
+		if (!$this->_client) {
+			$this->authenticate();
+		}
 	}
 
 	/**

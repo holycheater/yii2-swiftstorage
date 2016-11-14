@@ -16,12 +16,15 @@ class StorageComponentTest extends TestCase {
 	public function testPut() {
 		$storage = $this->getMockBuilder(StorageComponent::class)
 			->disableOriginalConstructor()
-			->setMethods([ 'getClient', 'getFileHandle' ])
+			->setMethods([ 'ensureAuth', 'getClient', 'getFileHandle' ])
 			->getMock();
 
 		$guzzleMock = $this->createMock(Client::class);
 		$responseMock = new Response(201);
 		$fpMock = fopen('/dev/null', 'r');
+
+		$storage->expects($this->once())
+			->method('ensureAuth');
 
 		$storage->expects($this->once())
 			->method('getClient')
@@ -44,12 +47,15 @@ class StorageComponentTest extends TestCase {
 	public function testGet() {
 		$storage = $this->getMockBuilder(StorageComponent::class)
 			->disableOriginalConstructor()
-			->setMethods([ 'getClient', 'getFileHandle' ])
+			->setMethods([ 'ensureAuth', 'getClient', 'getFileHandle' ])
 			->getMock();
 
 		$guzzleMock = $this->createMock(Client::class);
 		$stream = Stream::factory('resultstream');
 		$responseMock = new Response(200, [ ], $stream);
+
+		$storage->expects($this->once())
+			->method('ensureAuth');
 
 		$storage->expects($this->once())
 			->method('getClient')
@@ -68,12 +74,15 @@ class StorageComponentTest extends TestCase {
 	public function testGetAsString() {
 		$storage = $this->getMockBuilder(StorageComponent::class)
 			->disableOriginalConstructor()
-			->setMethods([ 'getClient', 'getFileHandle' ])
+			->setMethods([ 'ensureAuth', 'getClient', 'getFileHandle' ])
 			->getMock();
 
 		$guzzleMock = $this->createMock(Client::class);
 		$stream = Stream::factory('resultstream');
 		$responseMock = new Response(200, [ ], $stream);
+
+		$storage->expects($this->once())
+			->method('ensureAuth');
 
 		$storage->expects($this->once())
 			->method('getClient')
@@ -92,11 +101,14 @@ class StorageComponentTest extends TestCase {
 	public function testHeaders() {
 		$storage = $this->getMockBuilder(StorageComponent::class)
 			->disableOriginalConstructor()
-			->setMethods([ 'getClient', 'getFileHandle' ])
+			->setMethods([ 'ensureAuth', 'getClient', 'getFileHandle' ])
 			->getMock();
 
 		$guzzleMock = $this->createMock(Client::class);
 		$responseMock = new Response(200, [ 'x-a' => 1, 'x-b' => 2 ]);
+
+		$storage->expects($this->once())
+			->method('ensureAuth');
 
 		$storage->expects($this->once())
 			->method('getClient')
@@ -116,11 +128,14 @@ class StorageComponentTest extends TestCase {
 	public function testExists() {
 		$storage = $this->getMockBuilder(StorageComponent::class)
 			->disableOriginalConstructor()
-			->setMethods([ 'getClient', 'getFileHandle' ])
+			->setMethods([ 'ensureAuth', 'getClient', 'getFileHandle' ])
 			->getMock();
 
 		$guzzleMock = $this->createMock(Client::class);
 		$responseMock = new Response(200);
+
+		$storage->expects($this->once())
+			->method('ensureAuth');
 
 		$storage->expects($this->once())
 			->method('getClient')
@@ -137,11 +152,14 @@ class StorageComponentTest extends TestCase {
 	public function testExistsNot() {
 		$storage = $this->getMockBuilder(StorageComponent::class)
 			->disableOriginalConstructor()
-			->setMethods([ 'getClient', 'getFileHandle' ])
+			->setMethods([ 'ensureAuth', 'getClient', 'getFileHandle' ])
 			->getMock();
 
 		$guzzleMock = $this->createMock(Client::class);
 		$responseMock = new Response(404);
+
+		$storage->expects($this->once())
+			->method('ensureAuth');
 
 		$storage->expects($this->once())
 			->method('getClient')
@@ -190,5 +208,17 @@ class StorageComponentTest extends TestCase {
 		$storage->username = 'testuser';
 		$storage->password = 'testpassword';
 		$storage->authenticate();
+	}
+
+	public function testEnsureAuth() {
+		$storage = $this->getMockBuilder(StorageComponent::class)
+			->disableOriginalConstructor()
+			->setMethods([ 'authenticate' ])
+			->getMock();
+
+		$storage->expects($this->once())
+			->method('authenticate');
+
+		$storage->ensureAuth();
 	}
 }
