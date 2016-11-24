@@ -119,7 +119,7 @@ class StorageComponent extends Component {
 		$headers = $response->getHeaders();
 		$result = [ ];
 		foreach ($headers as $name => $values) {
-			$result[$name] = implode(', ', $values);
+			$result[strtolower($name)] = implode(', ', $values);
 		}
 		return $result;
 	}
