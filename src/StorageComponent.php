@@ -5,6 +5,7 @@ namespace alexsalt\swiftstorage;
 
 use yii\base\Component;
 use GuzzleHttp\Client as HttpClient;
+use GuzzleHttp\Message\RequestInterface;
 use GuzzleHttp\Exception\RequestException;
 
 class StorageComponent extends Component {
@@ -55,12 +56,10 @@ class StorageComponent extends Component {
 	 * @throws StorageException
 	 */
 	public function put($dstPath, $srcFile) {
-		$this->ensureAuth();
-		$client = $this->getClient();
 		$handle = $this->getFileHandle($srcFile);
-
 		try {
-			$response = $client->put($dstPath, [ 'body' => $handle ]);
+			$request = $this->createRequest('PUT', $dstPath, [ 'body' => $handle ]);
+			$response = $this->send($request);
 		} catch (RequestException $e) {
 			throw new StorageException('put file error', 0, $e);
 		}
@@ -76,11 +75,8 @@ class StorageComponent extends Component {
 	 * @throws StorageException
 	 */
 	public function get($filename) {
-		$this->ensureAuth();
-		$client = $this->getClient();
-
 		try {
-			$response = $client->get($filename);
+			$response = $this->send($this->createRequest('GET', $filename));
 		} catch (RequestException $e) {
 			throw new StorageException('get file exception', 0, $e);
 		}
@@ -107,11 +103,8 @@ class StorageComponent extends Component {
 	 * @throws StorageException
 	 */
 	public function headers($filename) {
-		$this->ensureAuth();
-		$client = $this->getClient();
-
 		try {
-			$response = $client->head($filename);
+			$response = $this->send($this->createRequest('HEAD', $filename));
 		} catch (RequestException $e) {
 			throw new StorageException('get headers failed', 0, $e);
 		}
@@ -131,10 +124,8 @@ class StorageComponent extends Component {
 	 * @throws StorageException
 	 */
 	public function exists($filename) {
-		$this->ensureAuth();
-		$client = $this->getClient();
 		try {
-			$response = $client->head($filename);
+			$response = $this->send($this->createRequest('HEAD', $filename));
 		} catch (RequestException $e) {
 			if ($e->getCode() == 404) {
 				return false;
@@ -204,6 +195,31 @@ class StorageComponent extends Component {
 				],
 			],
 		]);
+	}
+
+	/**
+	 * create guzzle request
+	 */
+	public function createRequest($method, $url = null, array $options = []) {
+		return $this->getClient()->createRequest($method, $url, $options);
+	}
+
+	/**
+	 * send request thru guzzle
+	 */
+	public function send(RequestInterface $request) {
+		$this->ensureAuth();
+		try {
+			$response = $this->getClient()->send($request);
+		} catch (RequestException $e) {
+			if ($e->getCode() == 401) {
+				$this->authenticate(); // probably token expired, re-authenticate
+				$response = $this->getClient()->send($request);
+			} else {
+				throw $e;
+			}
+		}
+		return $response;
 	}
 
 	public function getClient() {

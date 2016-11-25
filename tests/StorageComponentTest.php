@@ -4,6 +4,7 @@
 use PHPUnit\Framework\TestCase;
 use alexsalt\swiftstorage\StorageComponent;
 use GuzzleHttp\Client;
+use GuzzleHttp\Message\Request;
 use GuzzleHttp\Message\Response;
 use GuzzleHttp\Stream\Stream;
 use GuzzleHttp\Stream\StreamInterface;
@@ -16,27 +17,22 @@ class StorageComponentTest extends TestCase {
 	public function testPut() {
 		$storage = $this->getMockBuilder(StorageComponent::class)
 			->disableOriginalConstructor()
-			->setMethods([ 'ensureAuth', 'getClient', 'getFileHandle' ])
+			->setMethods([ 'createRequest', 'send', 'getFileHandle' ])
 			->getMock();
-
-		$guzzleMock = $this->createMock(Client::class);
+		$requestMock = $this->createMock(Request::class);
 		$responseMock = new Response(201);
 		$fpMock = fopen('/dev/null', 'r');
-
-		$storage->expects($this->once())
-			->method('ensureAuth');
-
-		$storage->expects($this->once())
-			->method('getClient')
-			->willReturn($guzzleMock);
 
 		$storage->expects($this->once())
 			->method('getFileHandle')
 			->willReturn($fpMock);
 
-		$guzzleMock->expects($this->once())
-			->method('put')
-			->with('dst', [ 'body' => $fpMock ])
+		$storage->expects($this->once())
+			->method('createRequest')
+			->with('PUT', 'dst', [ 'body' => $fpMock ])
+			->willReturn($requestMock);
+		$storage->expects($this->once())
+			->method('send')
 			->willReturn($responseMock);
 
 		$result = $storage->put('dst', 'srcf');
@@ -47,23 +43,18 @@ class StorageComponentTest extends TestCase {
 	public function testGet() {
 		$storage = $this->getMockBuilder(StorageComponent::class)
 			->disableOriginalConstructor()
-			->setMethods([ 'ensureAuth', 'getClient', 'getFileHandle' ])
+			->setMethods([ 'createRequest', 'send', 'getFileHandle' ])
 			->getMock();
-
-		$guzzleMock = $this->createMock(Client::class);
 		$stream = Stream::factory('resultstream');
+		$requestMock = $this->createMock(Request::class);
 		$responseMock = new Response(200, [ ], $stream);
 
 		$storage->expects($this->once())
-			->method('ensureAuth');
-
+			->method('createRequest')
+			->with('GET', 'testfile')
+			->willReturn($requestMock);
 		$storage->expects($this->once())
-			->method('getClient')
-			->willReturn($guzzleMock);
-
-		$guzzleMock->expects($this->once())
-			->method('get')
-			->with('testfile')
+			->method('send')
 			->willReturn($responseMock);
 
 		$result = $storage->get('testfile');
@@ -74,23 +65,18 @@ class StorageComponentTest extends TestCase {
 	public function testGetAsString() {
 		$storage = $this->getMockBuilder(StorageComponent::class)
 			->disableOriginalConstructor()
-			->setMethods([ 'ensureAuth', 'getClient', 'getFileHandle' ])
+			->setMethods([ 'createRequest', 'send', 'getFileHandle' ])
 			->getMock();
-
-		$guzzleMock = $this->createMock(Client::class);
+		$requestMock = $this->createMock(Request::class);
 		$stream = Stream::factory('resultstream');
 		$responseMock = new Response(200, [ ], $stream);
 
 		$storage->expects($this->once())
-			->method('ensureAuth');
-
+			->method('createRequest')
+			->with('GET', 'testfile')
+			->willReturn($requestMock);
 		$storage->expects($this->once())
-			->method('getClient')
-			->willReturn($guzzleMock);
-
-		$guzzleMock->expects($this->once())
-			->method('get')
-			->with('testfile')
+			->method('send')
 			->willReturn($responseMock);
 
 		$result = $storage->getAsString('testfile');
@@ -101,22 +87,17 @@ class StorageComponentTest extends TestCase {
 	public function testHeaders() {
 		$storage = $this->getMockBuilder(StorageComponent::class)
 			->disableOriginalConstructor()
-			->setMethods([ 'ensureAuth', 'getClient', 'getFileHandle' ])
+			->setMethods([ 'createRequest', 'send', 'getFileHandle' ])
 			->getMock();
-
-		$guzzleMock = $this->createMock(Client::class);
+		$requestMock = $this->createMock(Request::class);
 		$responseMock = new Response(200, [ 'x-a' => 1, 'x-b' => 2 ]);
 
 		$storage->expects($this->once())
-			->method('ensureAuth');
-
+			->method('createRequest')
+			->with('HEAD', 'testfile')
+			->willReturn($requestMock);
 		$storage->expects($this->once())
-			->method('getClient')
-			->willReturn($guzzleMock);
-
-		$guzzleMock->expects($this->once())
-			->method('head')
-			->with('testfile')
+			->method('send')
 			->willReturn($responseMock);
 
 		$result = $storage->headers('testfile');
@@ -128,22 +109,17 @@ class StorageComponentTest extends TestCase {
 	public function testExists() {
 		$storage = $this->getMockBuilder(StorageComponent::class)
 			->disableOriginalConstructor()
-			->setMethods([ 'ensureAuth', 'getClient', 'getFileHandle' ])
+			->setMethods([ 'createRequest', 'send', 'getFileHandle' ])
 			->getMock();
-
-		$guzzleMock = $this->createMock(Client::class);
+		$requestMock = $this->createMock(Request::class);
 		$responseMock = new Response(200);
 
 		$storage->expects($this->once())
-			->method('ensureAuth');
-
+			->method('createRequest')
+			->with('HEAD', 'testfile')
+			->willReturn($requestMock);
 		$storage->expects($this->once())
-			->method('getClient')
-			->willReturn($guzzleMock);
-
-		$guzzleMock->expects($this->once())
-			->method('head')
-			->with('testfile')
+			->method('send')
 			->willReturn($responseMock);
 
 		$this->assertTrue($storage->exists('testfile'));
@@ -152,22 +128,17 @@ class StorageComponentTest extends TestCase {
 	public function testExistsNot() {
 		$storage = $this->getMockBuilder(StorageComponent::class)
 			->disableOriginalConstructor()
-			->setMethods([ 'ensureAuth', 'getClient', 'getFileHandle' ])
+			->setMethods([ 'createRequest', 'send', 'getFileHandle' ])
 			->getMock();
-
-		$guzzleMock = $this->createMock(Client::class);
+		$requestMock = $this->createMock(Request::class);
 		$responseMock = new Response(404);
 
 		$storage->expects($this->once())
-			->method('ensureAuth');
-
+			->method('createRequest')
+			->with('HEAD', 'testfile')
+			->willReturn($requestMock);
 		$storage->expects($this->once())
-			->method('getClient')
-			->willReturn($guzzleMock);
-
-		$guzzleMock->expects($this->once())
-			->method('head')
-			->with('testfile')
+			->method('send')
 			->willReturn($responseMock);
 
 		$this->assertFalse($storage->exists('testfile'));
