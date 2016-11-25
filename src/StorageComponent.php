@@ -201,6 +201,7 @@ class StorageComponent extends Component {
 	 * create guzzle request
 	 */
 	public function createRequest($method, $url = null, array $options = []) {
+		$this->ensureAuth();
 		return $this->getClient()->createRequest($method, $url, $options);
 	}
 
