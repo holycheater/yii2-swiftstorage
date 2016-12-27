@@ -235,5 +235,7 @@ class StorageComponent extends Component {
 		} else {
 			throw new \InvalidArgumentException('param $srcFile is invalid');
 		}
+		
+		return $file;
 	}
 }
